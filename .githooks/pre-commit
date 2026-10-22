@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks commits that would leak secrets, internal hosts or real emails (public repo).
+exec node scripts/check-public.mjs --staged

@@ -1,0 +1,10 @@
+node_modules
+dist
+*.tgz
+# Never commit environment or key material (public repository)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
