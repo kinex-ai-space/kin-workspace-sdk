@@ -102,6 +102,48 @@ function Protected({ children }) {
 | `useClerkTokenGetter(template?)`        | A `TokenGetter` over the current session.                                                                                                     |
 | `useWorkspaceSignOut(clearLocalState?)` | `(redirectUrl?) => Promise<void>`                                                                                                             |
 
+## Server (Node)
+
+`@kinex/workspace-sdk/server` is for Node backends (NestJS, Express, …). It has no dependencies and no framework code: wire it into your own guards and controllers. Go backends use the [Go module](go/README.md).
+
+```ts
+import {
+  createClerkVerifier,
+  bearerToken,
+  internalKeyStatus,
+  HEADER_INTERNAL_API_KEY,
+  SyncUserRequest,
+  KinInvalidRequestError,
+} from "@kinex/workspace-sdk/server";
+
+// Hub → app calls (/kin/*): 0 = ok, 401 = wrong key, 503 = no key configured.
+const status = internalKeyStatus(
+  req.headers[HEADER_INTERNAL_API_KEY],
+  process.env.INTERNAL_API_KEY,
+);
+
+// POST /kin/sync-user
+const sync = SyncUserRequest.parse(req.body); // throws KinInvalidRequestError → 400
+if (sync.isRevoke) {
+  // deactivate the user, remove access
+} else if (sync.isStatusOnly) {
+  // re-enable the user, keep their grants as they are
+} else {
+  const role = sync.string("role");
+  const properties = sync.scopedRoles("properties");
+  // make the user's grants equal to the request
+}
+
+// Clerk session JWTs, verified from the issuer's JWKS (no Clerk secret key).
+const clerk = createClerkVerifier({
+  issuer: "https://clerk.example.com",
+  authorizedParties: ["https://app.example.com"],
+});
+const claims = await clerk.verify(bearerToken(req.headers.authorization));
+```
+
+A status-only request (`isActive: true` without `assignments`) is how the Hub re-enables a user. Treating it as a grant update would remove every grant the user had.
+
 ## Develop
 
 ```bash
