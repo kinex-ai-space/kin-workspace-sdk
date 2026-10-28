@@ -39,6 +39,26 @@ RUN --mount=type=secret,id=npm_token \
 
 **Go.** See [go/README.md](go/README.md): a normal Go module fetched by git tag (`go/vX.Y.Z`) with `GOPRIVATE`.
 
+### Build without a token (image)
+
+Each release is also published as a private image, `ghcr.io/kinex-ai-space/workspace-sdk:<version>`, built by `release.yml` from the very tarball published to GitHub Packages and the Go module of the matching `go/v<version>` tag. A build host that is already logged in to `ghcr.io` (the Dokploy server) pulls it, so the app build needs no `NPM_TOKEN` and no GitHub token.
+
+| Path in the image | Use                                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `/sdk/npm/*.tgz`  | seed the npm cache; `npm ci` then installs from it with the unchanged `package-lock.json` (same integrity)                   |
+| `/sdk/go-proxy/`  | `GOPROXY=file:///sdk/go-proxy,https://proxy.golang.org`, with `GONOSUMDB=github.com/kinex-ai-space/*` and unchanged `go.sum` |
+
+```bash
+# npm: seed the cache, then install offline-first. The token is never used, but .npmrc still needs a value.
+npm cache add /sdk/npm/*.tgz
+NPM_TOKEN=unused npm ci --prefer-offline
+
+# Go: do not set GOPRIVATE for this module (private modules bypass GOPROXY)
+GOPROXY=file:///sdk/go-proxy,https://proxy.golang.org GONOSUMDB='github.com/kinex-ai-space/*' go build ./...
+```
+
+Both paths were checked locally against a real consumer (LKS): they succeed with the seeded cache / proxy and fail with `401` / `terminal prompts disabled` without it. Keep the image version equal to the version in the app's lockfile and `go.mod`. A release is: tag `go/vX.Y.Z`, then tag `vX.Y.Z` (the Go module must exist before the image is built).
+
 ## Core (no React)
 
 ```ts
@@ -173,8 +193,8 @@ npm run typecheck && npm test
 Bump `version` in `package.json` (and add Go changes under `go/`), merge to `main`, then tag:
 
 ```bash
-git tag v0.3.0 && git push origin v0.3.0        # publishes @kinex-ai-space/workspace-sdk 0.3.0
-git tag go/v0.2.0 && git push origin go/v0.2.0  # releases the Go module (runs its tests)
+git tag go/v0.3.0 && git push origin go/v0.3.0  # releases the Go module (runs its tests); push this first
+git tag v0.3.0 && git push origin v0.3.0        # publishes the npm package and the ghcr.io image 0.3.0
 ```
 
 `.github/workflows/release.yml` checks that the tag matches `package.json`, runs the checks, and runs `npm publish` to GitHub Packages. Run it manually (`workflow_dispatch`) to publish a version that was tagged before this workflow existed.

@@ -48,3 +48,59 @@ jobs:
       - run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
       - run: go vet ./...
       - run: go test -race ./...
+
+  image:
+    needs: npm
+    if: github.event_name == 'workflow_dispatch' || !startsWith(github.ref_name, 'go/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      GOPRIVATE: github.com/kinex-ai-space/*
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: "@kinex-ai-space"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache: false
+      - name: Version
+        id: version
+        run: echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Stage the published tarball (same bytes, same integrity as the lockfiles)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p sdk-out/npm
+          cd sdk-out/npm
+          npm pack "@kinex-ai-space/workspace-sdk@${{ steps.version.outputs.value }}"
+      - name: Stage the Go module as a GOPROXY layout
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+          seed="$(mktemp -d)"
+          printf 'module seed\n\ngo 1.25.0\n' > "$seed/go.mod"
+          (cd "$seed" && GOMODCACHE="$seed/mod" go get "github.com/kinex-ai-space/kin-workspace-sdk/go@go/v${{ steps.version.outputs.value }}")
+          mkdir -p sdk-out/go-proxy
+          cp -R "$seed/mod/cache/download/github.com" sdk-out/go-proxy/github.com
+          git config --global --unset-all url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf
+      - run: echo "${{ steps.version.outputs.value }}" > sdk-out/VERSION
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.sdk
+          push: true
+          tags: ghcr.io/kinex-ai-space/workspace-sdk:${{ steps.version.outputs.value }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/kinex-ai-space/kin-workspace-sdk
