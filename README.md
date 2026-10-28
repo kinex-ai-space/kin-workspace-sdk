@@ -1,4 +1,4 @@
-# @kinex/workspace-sdk
+# @kinex-ai-space/workspace-sdk
 
 KiNex Workspace Hub integration for app frontends. It covers:
 
@@ -15,12 +15,29 @@ It also does not depend on a Clerk package version. The app passes its own Clerk
 
 ## Install
 
-Releases are tarballs on GitHub, so you need no registry and no token.
+The SDK is **private** and published as a package on GitHub Packages under the scope `@kinex-ai-space` (GitHub requires the scope to match the organization). Apps keep importing `@kinex/workspace-sdk` through an npm alias, so no import changes.
+
+**Node / frontend.** In the app, next to `package.json`:
+
+```ini
+# .npmrc
+@kinex-ai-space:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${NPM_TOKEN}
+```
 
 ```bash
-pnpm add https://github.com/kinex-ai-space/kin-workspace-sdk/releases/download/v0.1.0/kinex-workspace-sdk-0.1.0.tgz
-# or: npm install <same url>
+# npm / pnpm / bun: alias keeps the import name
+pnpm add "@kinex/workspace-sdk@npm:@kinex-ai-space/workspace-sdk@^0.2.0"
 ```
+
+`NPM_TOKEN` is a GitHub token with `read:packages` (a personal token locally; `secrets.GITHUB_TOKEN` with `packages: read` in GitHub Actions). In a Dockerfile, pass it as a build secret and never bake it into a layer:
+
+```dockerfile
+RUN --mount=type=secret,id=npm_token \
+    NPM_TOKEN="$(cat /run/secrets/npm_token)" pnpm install --frozen-lockfile
+```
+
+**Go.** See [go/README.md](go/README.md): a normal Go module fetched by git tag (`go/vX.Y.Z`) with `GOPRIVATE`.
 
 ## Core (no React)
 
@@ -149,21 +166,19 @@ A status-only request (`isActive: true` without `assignments`) is how the Hub re
 ```bash
 npm install
 npm run typecheck && npm test
-npm run pack:release   # dist/ + kinex-workspace-sdk-<version>.tgz → attach to a GitHub Release
 ```
 
-## Public repository rules
+## Release
 
-This repository is **public**. Never commit secrets (keys, tokens, `.env` files), internal hostnames, IP addresses, real emails or customer data. In docs and tests, use `example.com` hosts and `user@example.com`.
-
-`scripts/check-public.mjs` enforces these rules in three places, and fails on any violation:
-
-- **Before each commit:** `npm install` sets `core.hooksPath=.githooks`.
-- **Before `npm pack`:** it runs as part of `prepack`.
-- **In CI:** on every push and pull request. CI also checks every commit identity in the history.
-
-Commit with your GitHub **noreply** email:
+Bump `version` in `package.json` (and add Go changes under `go/`), merge to `main`, then tag:
 
 ```bash
-git config user.email "<id>+<login>@users.noreply.github.com"
+git tag v0.3.0 && git push origin v0.3.0        # publishes @kinex-ai-space/workspace-sdk 0.3.0
+git tag go/v0.2.0 && git push origin go/v0.2.0  # releases the Go module (runs its tests)
 ```
+
+`.github/workflows/release.yml` checks that the tag matches `package.json`, runs the checks, and runs `npm publish` to GitHub Packages. Run it manually (`workflow_dispatch`) to publish a version that was tagged before this workflow existed.
+
+## Secret check
+
+`scripts/check-secrets.mjs` blocks keys, tokens, private keys, JWTs and `.env` / key files. It runs before each commit (`npm install` sets `core.hooksPath=.githooks`), before `npm pack`, and in CI.

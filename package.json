@@ -1,11 +1,15 @@
 {
-  "name": "@kinex/workspace-sdk",
+  "name": "@kinex-ai-space/workspace-sdk",
   "version": "0.2.0",
   "description": "KiNex Workspace Hub integration. Frontend: allowed_apps, app access gate, app switcher data, Clerk token and sign-in helpers (headless, Clerk-version independent). Server (Node): Kin contract types, sync-user parsing, internal key check, issuer-only Clerk JWT verification.",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "repository": {
     "type": "git",
     "url": "https://github.com/kinex-ai-space/kin-workspace-sdk.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
   },
   "type": "module",
   "sideEffects": false,
@@ -50,8 +54,8 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check:public": "node scripts/check-public.mjs",
-    "prepack": "node scripts/check-public.mjs && npm run build",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "prepack": "node scripts/check-secrets.mjs && npm run build",
     "prepare": "git config core.hooksPath .githooks || true",
     "pack:release": "npm pack"
   },
