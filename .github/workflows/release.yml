@@ -29,9 +29,17 @@ jobs:
       - run: node scripts/check-secrets.mjs
       - run: npm run typecheck
       - run: npm test
-      - run: npm publish
+      - name: Publish (skipped when this version is already on the registry)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          if npm view "$name@$version" version > /dev/null 2>&1; then
+            echo "$name@$version is already published; skipping"
+          else
+            npm publish
+          fi
 
   go:
     if: startsWith(github.ref_name, 'go/v')
