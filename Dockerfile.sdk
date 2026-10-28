@@ -1,0 +1,10 @@
+# Ships the released SDK as a private image so apps build without any registry token:
+# the Dokploy host pulls it with the credentials it already holds for ghcr.io.
+#
+#   /sdk/npm/*.tgz      the exact tarball published to GitHub Packages (same integrity)
+#   /sdk/go-proxy/      a GOPROXY layout holding github.com/kinex-ai-space/kin-workspace-sdk/go
+#   /sdk/VERSION
+#
+# The release workflow stages ./sdk-out and builds this file; see README "Build without a token".
+FROM scratch
+COPY sdk-out /sdk
