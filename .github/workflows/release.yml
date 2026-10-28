@@ -1,0 +1,50 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "go/v*"
+  workflow_dispatch:
+
+jobs:
+  npm:
+    if: github.event_name == 'workflow_dispatch' || !startsWith(github.ref_name, 'go/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: "@kinex-ai-space"
+      - run: npm ci
+      - name: Tag matches package.json
+        if: startsWith(github.ref_name, 'v')
+        run: test "v$(node -p "require('./package.json').version")" = "${{ github.ref_name }}"
+      - run: node scripts/check-secrets.mjs
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  go:
+    if: startsWith(github.ref_name, 'go/v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - run: go vet ./...
+      - run: go test -race ./...

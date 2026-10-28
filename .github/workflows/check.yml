@@ -16,8 +16,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Public repository check (secrets, internal hosts, emails, commit identities)
-        run: node scripts/check-public.mjs
+      - name: Secret check
+        run: node scripts/check-secrets.mjs
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
