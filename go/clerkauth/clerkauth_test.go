@@ -117,6 +117,28 @@ func TestVerify(t *testing.T) {
 	}
 }
 
+func TestVerifyLeeway(t *testing.T) {
+	iss := newIssuer(t)
+	future := iss.claims(jwt.MapClaims{"nbf": time.Now().Add(30 * time.Second).Unix()})
+	ctx := context.Background()
+
+	strict, err := clerkauth.NewVerifier(clerkauth.Config{Issuer: iss.server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := strict.Verify(ctx, iss.token(t, future)); err == nil {
+		t.Error("default leeway accepted a token valid only 30s from now")
+	}
+
+	lenient, err := clerkauth.NewVerifier(clerkauth.Config{Issuer: iss.server.URL, Leeway: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lenient.Verify(ctx, iss.token(t, future)); err != nil {
+		t.Errorf("1m leeway rejected a token 30s ahead: %v", err)
+	}
+}
+
 func TestJWKSIsCached(t *testing.T) {
 	iss := newIssuer(t)
 	v, _ := clerkauth.NewVerifier(clerkauth.Config{Issuer: iss.server.URL})

@@ -26,7 +26,7 @@ const (
 	// minUnknownKidRefetch rate-limits JWKS refetches triggered by an unknown
 	// `kid` so garbage tokens cannot hammer the Clerk endpoint.
 	minUnknownKidRefetch = 30 * time.Second
-	clockSkewLeeway      = 5 * time.Second
+	defaultLeeway        = 5 * time.Second
 	jwksFetchTimeout     = 5 * time.Second
 )
 
@@ -51,6 +51,10 @@ type Claims struct {
 type Config struct {
 	Issuer            string
 	AuthorizedParties []string
+	// Leeway tolerates clock skew between this host and Clerk when checking `exp` and
+	// `nbf` (default 5s). Raise it on a machine whose clock runs behind, which sees
+	// fresh tokens as "issued in the future".
+	Leeway time.Duration
 	// RefreshInterval is how long a fetched JWKS stays fresh (default 1h).
 	RefreshInterval time.Duration
 	// HTTPClient overrides the JWKS fetch client (tests).
@@ -63,6 +67,7 @@ type Verifier struct {
 	jwksURL           string
 	authorizedParties []string
 	refreshInterval   time.Duration
+	leeway            time.Duration
 	httpClient        *http.Client
 
 	mu          sync.RWMutex
@@ -82,6 +87,10 @@ func NewVerifier(cfg Config) (*Verifier, error) {
 	if refresh <= 0 {
 		refresh = defaultRefreshInterval
 	}
+	leeway := cfg.Leeway
+	if leeway <= 0 {
+		leeway = defaultLeeway
+	}
 	client := cfg.HTTPClient
 	if client == nil {
 		client = &http.Client{Timeout: jwksFetchTimeout}
@@ -91,6 +100,7 @@ func NewVerifier(cfg Config) (*Verifier, error) {
 		jwksURL:           issuer + "/.well-known/jwks.json",
 		authorizedParties: cfg.AuthorizedParties,
 		refreshInterval:   refresh,
+		leeway:            leeway,
 		httpClient:        client,
 	}, nil
 }
@@ -115,7 +125,7 @@ func (v *Verifier) Verify(ctx context.Context, tokenStr string) (*Claims, error)
 		jwt.WithValidMethods([]string{"RS256"}),
 		jwt.WithIssuer(v.issuer),
 		jwt.WithExpirationRequired(),
-		jwt.WithLeeway(clockSkewLeeway),
+		jwt.WithLeeway(v.leeway),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("clerk: verify: %w", err)
