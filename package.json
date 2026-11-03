@@ -1,5 +1,5 @@
 {
-  "name": "@kinex/workspace-sdk",
+  "name": "@kinex-ai/workspace-sdk",
   "version": "0.2.1",
   "description": "KiNex Workspace Hub integration. Frontend: allowed_apps, app access gate, app switcher data, Clerk token and sign-in helpers (headless, Clerk-version independent). Server (Node): Kin contract types, sync-user parsing, internal key check, issuer-only Clerk JWT verification.",
   "license": "MIT",

@@ -1,4 +1,4 @@
-# @kinex/workspace-sdk
+# @kinex-ai/workspace-sdk
 
 KiNex Workspace Hub integration for app frontends. It covers:
 
@@ -15,13 +15,13 @@ It also does not depend on a Clerk package version. The app passes its own Clerk
 
 ## Install
 
-The SDK is public on npmjs.com as `@kinex/workspace-sdk`. No token and no `.npmrc` entry are needed.
+The SDK is public on npmjs.com as `@kinex-ai/workspace-sdk` (the npm scope `@kinex` was not available). Apps import it as `@kinex/workspace-sdk` through an npm alias, so no import changes and no token or `.npmrc` entry are needed:
 
 ```bash
-npm install @kinex/workspace-sdk   # or: pnpm add / bun add
+npm install "@kinex/workspace-sdk@npm:@kinex-ai/workspace-sdk@^0.2.1"   # or pnpm add / bun add
 ```
 
-Releases up to 0.2.0 were published privately to GitHub Packages as `@kinex-ai-space/workspace-sdk`, which apps installed through the alias `"@kinex/workspace-sdk": "npm:@kinex-ai-space/workspace-sdk@…"`. Replace that alias with the plain version and drop the GitHub Packages lines from `.npmrc`; the import name `@kinex/workspace-sdk` does not change.
+Releases up to 0.2.0 were published privately to GitHub Packages as `@kinex-ai-space/workspace-sdk`. Point the alias at `@kinex-ai/workspace-sdk` instead and drop the GitHub Packages lines from `.npmrc`.
 
 **Go.** See [go/README.md](go/README.md): a normal Go module fetched by git tag (`go/vX.Y.Z`). The repository is public, so no token or `GOPRIVATE` is needed.
 
