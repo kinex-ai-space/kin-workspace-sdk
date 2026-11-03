@@ -21,7 +21,7 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
-          scope: "@kinex"
+          scope: "@kinex-ai"
       - run: npm ci
       - name: Tag matches package.json
         if: startsWith(github.ref_name, 'v')
@@ -82,7 +82,7 @@ jobs:
         run: |
           mkdir -p sdk-out/npm
           cd sdk-out/npm
-          npm pack "@kinex/workspace-sdk@${{ steps.version.outputs.value }}"
+          npm pack "@kinex-ai/workspace-sdk@${{ steps.version.outputs.value }}"
       - name: Stage the Go module as a GOPROXY layout
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
