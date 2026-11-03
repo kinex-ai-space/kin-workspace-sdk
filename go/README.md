@@ -2,23 +2,13 @@
 
 Go SDK for apps that integrate with KiNex Workspace Hub. It depends only on the standard library and `golang-jwt/jwt/v5`; it does not use gin, a Clerk SDK or any MCP library.
 
-The repository is private, so the module is fetched like any private Go module: by git tag, with `GOPRIVATE` and a token.
+The repository is public, so the module is fetched like any Go module, by git tag. No token or `GOPRIVATE` is needed.
 
 ```bash
-go env -w GOPRIVATE=github.com/kinex-ai-space/*
-# GitHub token with read access to kin-workspace-sdk (a deploy key also works)
-git config --global url."https://x-access-token:${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
-go get github.com/kinex-ai-space/kin-workspace-sdk/go@go/v0.1.0   # tags are go/vX.Y.Z
+go get github.com/kinex-ai-space/kin-workspace-sdk/go@go/v0.2.0   # tags are go/vX.Y.Z
 ```
 
-In CI, set `GOPRIVATE` and the `insteadOf` rule before `go mod download`. In a Dockerfile, pass the token as a build secret and remove the git config in the same `RUN` so it never reaches an image layer:
-
-```dockerfile
-RUN --mount=type=secret,id=gh_token \
-    git config --global url."https://x-access-token:$(cat /run/secrets/gh_token)@github.com/".insteadOf "https://github.com/" \
- && GOPRIVATE=github.com/kinex-ai-space/* go mod download \
- && git config --global --unset-all url."https://x-access-token:$(cat /run/secrets/gh_token)@github.com/".insteadOf
-```
+If an app set `GOPRIVATE=github.com/kinex-ai-space/*` while the repository was private, remove it: it makes Go bypass the module proxy and checksum database for this module.
 
 | Package     | What it does                                                                                                                                                                                                                                                                                      |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
