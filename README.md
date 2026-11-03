@@ -1,4 +1,4 @@
-# @kinex-ai-space/workspace-sdk
+# @kinex/workspace-sdk
 
 KiNex Workspace Hub integration for app frontends. It covers:
 
@@ -15,33 +15,19 @@ It also does not depend on a Clerk package version. The app passes its own Clerk
 
 ## Install
 
-The SDK is **private** and published as a package on GitHub Packages under the scope `@kinex-ai-space` (GitHub requires the scope to match the organization). Apps keep importing `@kinex/workspace-sdk` through an npm alias, so no import changes.
-
-**Node / frontend.** In the app, next to `package.json`:
-
-```ini
-# .npmrc
-@kinex-ai-space:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NPM_TOKEN}
-```
+The SDK is public on npmjs.com as `@kinex/workspace-sdk`. No token and no `.npmrc` entry are needed.
 
 ```bash
-# npm / pnpm / bun: alias keeps the import name
-pnpm add "@kinex/workspace-sdk@npm:@kinex-ai-space/workspace-sdk@^0.2.0"
+npm install @kinex/workspace-sdk   # or: pnpm add / bun add
 ```
 
-`NPM_TOKEN` is a GitHub token with `read:packages` (a personal token locally; `secrets.GITHUB_TOKEN` with `packages: read` in GitHub Actions). In a Dockerfile, pass it as a build secret and never bake it into a layer:
+Releases up to 0.2.0 were published privately to GitHub Packages as `@kinex-ai-space/workspace-sdk`, which apps installed through the alias `"@kinex/workspace-sdk": "npm:@kinex-ai-space/workspace-sdk@…"`. Replace that alias with the plain version and drop the GitHub Packages lines from `.npmrc`; the import name `@kinex/workspace-sdk` does not change.
 
-```dockerfile
-RUN --mount=type=secret,id=npm_token \
-    NPM_TOKEN="$(cat /run/secrets/npm_token)" pnpm install --frozen-lockfile
-```
-
-**Go.** See [go/README.md](go/README.md): a normal Go module fetched by git tag (`go/vX.Y.Z`) with `GOPRIVATE`.
+**Go.** See [go/README.md](go/README.md): a normal Go module fetched by git tag (`go/vX.Y.Z`). The repository is public, so no token or `GOPRIVATE` is needed.
 
 ### Build without a token (image)
 
-Each release is also published as a private image, `ghcr.io/kinex-ai-space/workspace-sdk:<version>`, built by `release.yml` from the very tarball published to GitHub Packages and the Go module of the matching `go/v<version>` tag. A build host that is already logged in to `ghcr.io` (the Dokploy server) pulls it, so the app build needs no `NPM_TOKEN` and no GitHub token.
+Each release is also published as an image, `ghcr.io/kinex-ai-space/workspace-sdk:<version>`, built by `release.yml` from the very tarball published to npmjs.com and the Go module of the matching `go/v<version>` tag. A build host that is already logged in to `ghcr.io` (the Dokploy server) pulls it, so the app build needs no `NPM_TOKEN` and no GitHub token.
 
 | Path in the image | Use                                                                                                                          |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -49,15 +35,15 @@ Each release is also published as a private image, `ghcr.io/kinex-ai-space/works
 | `/sdk/go-proxy/`  | `GOPROXY=file:///sdk/go-proxy,https://proxy.golang.org`, with `GONOSUMDB=github.com/kinex-ai-space/*` and unchanged `go.sum` |
 
 ```bash
-# npm: seed the cache, then install offline-first. The token is never used, but .npmrc still needs a value.
+# npm: seed the cache, then install offline-first.
 npm cache add /sdk/npm/*.tgz
-NPM_TOKEN=unused npm ci --prefer-offline
+npm ci --prefer-offline
 
 # Go: do not set GOPRIVATE for this module (private modules bypass GOPROXY)
 GOPROXY=file:///sdk/go-proxy,https://proxy.golang.org GONOSUMDB='github.com/kinex-ai-space/*' go build ./...
 ```
 
-Both paths were checked locally against a real consumer (LKS): they succeed with the seeded cache / proxy and fail with `401` / `terminal prompts disabled` without it. Keep the image version equal to the version in the app's lockfile and `go.mod`. A release is: tag `go/vX.Y.Z`, then tag `vX.Y.Z` (the Go module must exist before the image is built).
+Now that the package is on npmjs.com and the repository is public, the image is optional: builds can install from the registries directly. Keep the image version equal to the version in the app's lockfile and `go.mod`. A release is: tag `go/vX.Y.Z`, then tag `vX.Y.Z` (the Go module must exist before the image is built).
 
 ## Core (no React)
 

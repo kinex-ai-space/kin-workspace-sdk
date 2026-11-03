@@ -13,15 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      id-token: write # npm provenance
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          registry-url: https://npm.pkg.github.com
-          scope: "@kinex-ai-space"
+          registry-url: https://registry.npmjs.org
+          scope: "@kinex"
       - run: npm ci
       - name: Tag matches package.json
         if: startsWith(github.ref_name, 'v')
@@ -29,16 +29,16 @@ jobs:
       - run: node scripts/check-secrets.mjs
       - run: npm run typecheck
       - run: npm test
-      - name: Publish (skipped when this version is already on the registry)
+      - name: Publish to npmjs.com (skipped when this version is already on the registry)
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           name="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
           if npm view "$name@$version" version > /dev/null 2>&1; then
             echo "$name@$version is already published; skipping"
           else
-            npm publish
+            npm publish --access public --provenance
           fi
 
   go:
@@ -71,8 +71,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://npm.pkg.github.com
-          scope: "@kinex-ai-space"
       - uses: actions/setup-go@v5
         with:
           go-version-file: go/go.mod
@@ -81,12 +79,10 @@ jobs:
         id: version
         run: echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - name: Stage the published tarball (same bytes, same integrity as the lockfiles)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p sdk-out/npm
           cd sdk-out/npm
-          npm pack "@kinex-ai-space/workspace-sdk@${{ steps.version.outputs.value }}"
+          npm pack "@kinex/workspace-sdk@${{ steps.version.outputs.value }}"
       - name: Stage the Go module as a GOPROXY layout
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
